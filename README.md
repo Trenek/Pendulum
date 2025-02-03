@@ -1,5 +1,4 @@
--# Wahadło o dwóch węzłach
-### Autor - Mateusz Sas
+# Wahadło o dwóch węzłach
 ## Problem
 Potrzeba analizy działania wahadła o dwóch węzłach
 ## Cel Symulacji
