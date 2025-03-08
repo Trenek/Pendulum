@@ -43,7 +43,7 @@ add_custom_command(TARGET Test POST_BUILD
 )
 
 target_include_directories(Test PRIVATE ${INCLUDE_DIRECTORIES})
-target_link_libraries(Test ${LINK_LIBRARIES} -lgsl -lgslcblas -lm)
+target_link_libraries(Test ${LINK_LIBRARIES} -lm)
 target_compile_features(Test PRIVATE c_std_23)
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
     target_link_options(Test PRIVATE -mwindows)
