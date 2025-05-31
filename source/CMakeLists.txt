@@ -1,5 +1,5 @@
 set(SOURCE_DIRECTORIES
-    "${CMAKE_CURRENT_SOURCE_DIR}/player"
+    "${CMAKE_CURRENT_SOURCE_DIR}/pendulum"
     "${CMAKE_CURRENT_SOURCE_DIR}/engine"
         "${CMAKE_CURRENT_SOURCE_DIR}/engine/assets"
             "${CMAKE_CURRENT_SOURCE_DIR}/engine/assets/models"

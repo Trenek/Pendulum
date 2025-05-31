@@ -7,7 +7,6 @@
 #include "entity.h"
 #include "modelBuilder.h"
 #include "stringBuilder.h"
-#include "instanceBuffer.h"
 
 #include "renderPassCore.h"
 
@@ -129,5 +128,5 @@ void loadResources(struct EngineCore *engine, enum state *state) {
 
     loadSounds(engine);
 
-    *state = LOAD_GAME;
+    *state = LOAD_SIMULATION;
 }
