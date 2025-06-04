@@ -5,6 +5,7 @@ add_subdirectory(cglm EXCLUDE_FROM_ALL)
 add_subdirectory(freetype EXCLUDE_FROM_ALL)
 add_subdirectory(miniaudio EXCLUDE_FROM_ALL)
 add_subdirectory(openGJK EXCLUDE_FROM_ALL)
+add_subdirectory(gsl EXCLUDE_FROM_ALL)
 
 set(INCLUDE_DIRECTORIES
     "${Vulkan_INCLUDE_DIRS}"
@@ -14,6 +15,7 @@ set(INCLUDE_DIRECTORIES
     "${CMAKE_CURRENT_SOURCE_DIR}/cglm/include/cglm"
     "${CMAKE_CURRENT_SOURCE_DIR}/miniaudio"
     "${CMAKE_CURRENT_SOURCE_DIR}/openGJK/include/openGJK"
+    "${GSL_BINARY_DIR}"
 )
 
 set(LINK_LIBRARIES
@@ -23,6 +25,7 @@ set(LINK_LIBRARIES
     freetype
     miniaudio
     obj_openGJK
+    gsl
 )
 
 if (WIN32)

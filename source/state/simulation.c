@@ -1,6 +1,10 @@
 #include <cglm.h>
 #include <string.h>
 
+#include <gsl/gsl_linalg.h>
+#include <gsl/gsl_matrix.h>
+#include <gsl/gsl_vector.h>
+
 #include "engineCore.h"
 #include "state.h"
 
@@ -47,48 +51,55 @@ void fun1(struct node *init, double (*result)[2]) {
     result[0][1] = -g * sin(init[0].angle);
 }
 
-// Known A_0, B_0, A_0`, B_0`
-// A`` - C * sin(A) = C(B`^2sin(A-B)-B``cos(A-B))
-// B`` - C * sin(B) = C * A`^2 * sin(A-B) - A`` * cos(A - B)
-//
-// A_1 = A
-// A_2 = A`
-// B_1 = B
-// B_2 = B`
-//
-// A_1` = A_2
-// A_2` = C - B_2`
-// B_1` = B_2
-// B_2` = C - A_2` * C
-void fun21(struct node *init, double (*result)[2]) {
-    float l1 = (g / init[0].length) * sin(init[0].angle);
-    float l2 = (g / init[1].length) * sin(init[1].angle);
+void fun21(struct node *initPtr, double (*result)[2]) {
+    struct node *init = initPtr + 1;
 
-    float m1 = - (init[1].length * init[1].mass) / (init[0].length * (init[0].mass + init[1].mass));
-    float m2 = init[0].length / init[1].length;
+    double A = (init[1].mass + init[2].mass) * init[1].length * init[1].length;
+    double B = init[2].mass * init[1].length * init[2].length * cos(init[1].angle - init[2].angle);
+    double C = (
+        init[2].mass * init[1].length * init[2].length * init[2].angularVelocity * init[2].angularVelocity * sin(init[1].angle - init[2].angle) +
+        (init[1].mass + init[2].mass) * init[1].length * g * sin(init[1].angle)
+    );
+    double D = init[2].mass * init[2].length * init[2].length;
+    double E = init[2].mass * init[1].length * init[2].length * cos(init[1].angle - init[2].angle);
+    double F = (
+        init[2].mass * init[2].length * g * sin(init[2].angle) -
+        init[2].mass * init[1].length * init[2].length * init[1].angularVelocity * init[1].angularVelocity * sin(init[1].angle - init[2].angle)
+    );
 
-    float r11 = init[1].angularVelocity * init[1].angularVelocity * sin(init[0].angle - init[1].angle);
-    float r21 = init[0].angularVelocity * init[0].angularVelocity * sin(init[0].angle - init[1].angle);
+    double AArr[] = {
+        A, B,
+        D, E
+    };
+    double BArr[] = {
+        C,
+        F
+    };
 
-    float r2 = cos(init[0].angle - init[1].angle);
+    gsl_matrix_view A_view = gsl_matrix_view_array(AArr, 2, 2);
+    gsl_vector_view b_view = gsl_vector_view_array(BArr, 2);
+    gsl_vector *x = gsl_vector_alloc(2);
+    gsl_permutation *p = gsl_permutation_alloc(2);
+    int signum = 0;
 
-    l1 = r11 - l1;
-    l2 = r21 - l2;
+    gsl_linalg_LU_decomp(&A_view.matrix, p, &signum);
+    gsl_linalg_LU_solve(&A_view.matrix, p, &b_view.vector, x);
 
-    result[0][0] = init[0].angularVelocity;
-    result[0][1] = (l1 + m1 * (r11 + r2 * (l2 + m2 * r21))) / (1 + m1 * r2 * r2 * m2);
-    result[1][0] = init[1].angularVelocity;
-    result[1][1] = l2 + m2 * (r21 - r2 * result[0][1]);
+    result[0][0] = init[1].angularVelocity;
+    result[0][1] = gsl_vector_get(x, 0);
+    result[1][0] = init[2].angularVelocity;
+    result[1][1] = gsl_vector_get(x, 1);
+
+    gsl_vector_free(x);
+    gsl_permutation_free(p);
 }
 
-void fun22(struct node *init, double (*result)[2]) {
+void fun2(struct node *init, double (*result)[2]) {
     double deltaT = init[0].angle - init[1].angle;
     double alfa = init[0].mass + init[1].mass * sin(deltaT) * sin(deltaT);
     double M = init[0].mass + init[1].mass;
 
-    result[0][0] = init[0].angularVelocity;
-    result[1][0] = init[1].angularVelocity;
-
+    result[0][0] = fmod(init[0].angularVelocity, 2 * M_PI);
     result[0][1] = (
         -sin(deltaT) * init[1].mass * (
             init[0].length * init[0].angularVelocity * init[0].angularVelocity * cos(deltaT) +
@@ -98,6 +109,8 @@ void fun22(struct node *init, double (*result)[2]) {
             init[1].mass * sin(init[1].angle) * cos(deltaT)
         )
     ) / (alfa * init[0].length);
+
+    result[1][0] = fmod(init[1].angularVelocity, 2 * M_PI);
     result[1][1] = (
         sin(deltaT) * (
             M * init[0].length * init[0].angularVelocity * init[0].angularVelocity +
@@ -109,107 +122,6 @@ void fun22(struct node *init, double (*result)[2]) {
     ) / (alfa * init[1].length);
 }
 
-void euler(int N, struct node *init, double t, void (*fun)(struct node *init, double (*result)[2])) {
-    double k1[N][2];
-
-    fun(init, k1);
-
-    for (int i = 0; i < N; i += 1) {
-        init[i].angle += t * k1[i][0];
-        init[i].angularVelocity += t * k1[i][1];
-    }
-}
-
-void heun(int N, struct node *init, double t, void (*fun)(struct node *init, double (*result)[2])) {
-    struct node temp[N];
-    double k1[N][2];
-    double k2[N][2];
-
-    fun(init, k1);
-
-    for (int i = 0; i < N; i += 1) {
-        temp[i].angle = init[i].angle + t * k1[i][0];
-        temp[i].angularVelocity += init[i].angularVelocity + t * k1[i][1];
-        temp[i].length = init[i].length;
-        temp[i].mass = init[i].mass;
-    }
-
-    fun(temp, k2);
-
-    for (int i = 0; i < N; i += 1) {
-        init[i].angle += (t / 2) * (k1[i][0] + k2[i][0]);
-        init[i].angularVelocity += (t / 2) * (k1[i][1] + k2[i][1]);
-    }
-}
-
-void modified_euler(int N, struct node *init, double t, void (*fun)(struct node *init, double (*result)[2])) {
-    struct node temp[N];
-    double k1[N][2];
-    double k2[N][2];
-
-    fun(init, k1);
-
-    for (int i = 0; i < N; i += 1) {
-        temp[i].angle = init[i].angle + t / 2 * k1[i][0];
-        temp[i].angularVelocity = init[i].angularVelocity + t / 2 * k1[i][1];
-        temp[i].length = init[i].length;
-        temp[i].mass = init[i].mass;
-    }
-
-    fun(temp, k2);
-
-    for (int i = 0; i < N; i += 1) {
-        init[i].angle += t * k2[i][0];
-        init[i].angularVelocity += t * k2[i][1];
-    }
-}
-
-void rk4(int N, struct node *init, double t, void (*fun)(struct node *init, double (*result)[2])) {
-    struct node temp[N];
-    double k1[N][2];
-    double k2[N][2];
-    double k3[N][2];
-    double k4[N][2];
-
-    fun(init, k1);
-
-    for (int i = 0; i < N; i += 1) {
-        k1[i][0] *= t;
-        k1[i][1] *= t;
-        temp[i].angle = init[i].angle + k1[i][0] / 2;
-        temp[i].angularVelocity = init[i].angularVelocity + k1[i][1] / 2;
-        temp[i].length = init[i].length;
-        temp[i].mass = init[i].mass;
-    }
-
-    fun(temp, k2);
-
-    for (int i = 0; i < N; i += 1) {
-        k2[i][0] *= t;
-        k2[i][1] *= t;
-        temp[i].angle = init[i].angle + k2[i][0] / 2;
-        temp[i].angularVelocity = init[i].angularVelocity + k2[i][1] / 2;
-    }
-
-    fun(temp, k3);
-
-    for (int i = 0; i < N; i += 1) {
-        k3[i][0] *= t;
-        k3[i][1] *= t;
-        temp[i].angle = init[i].angle + k3[i][0];
-        temp[i].angularVelocity = init[i].angularVelocity + k3[i][1];
-    }
-
-    fun(temp, k4);
-
-    for (int i = 0; i < N; i += 1) {
-        k4[i][0] *= t;
-        k4[i][1] *= t;
-        init[i].angle += (k1[i][0] + 2 * k2[i][0] + 2 * k3[i][0] + k4[i][0]) / 6;
-        init[i].angularVelocity += (k1[i][1] + 2 * k2[i][1] + 2 * k3[i][1] + k4[i][1]) / 6;
-    }
-}
-
 void update(
     float t,
     struct system *s,
@@ -219,7 +131,7 @@ void update(
     struct node (*nodee)[s->pendulumCount][s->nodeCount] = (void *)s->node;
     void (*fun[])(struct node *init, double (*result)[2]) = {
         fun1,
-        fun22
+        fun21
     };
 
     for (int i = 0; i < 4; i += 1)
