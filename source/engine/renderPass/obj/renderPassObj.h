@@ -20,6 +20,7 @@ struct pipelineConnection {
 
 struct renderPassBuilder {
     double coordinates[4];
+    double color[4];
     struct renderPassCore *renderPass;
     
     void (*updateCameraBuffer)(void *buffersMapped, VkExtent2D swapChainExtent, vec3 cameraPos, vec3 direction);
@@ -31,7 +32,8 @@ struct renderPassBuilder {
 struct renderPassObj {
     VkDevice device;
     double coordinates[4];
-    
+    double color[4];
+
     struct renderPassCore *renderPass;
     struct camera camera;
     void (*updateCameraBuffer)(void *buffersMapped, VkExtent2D swapChainExtent, vec3 cameraPos, vec3 direction);

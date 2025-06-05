@@ -25,6 +25,7 @@ struct renderPassObj *createRenderPassObj(struct renderPassBuilder builder, stru
     };
 
     memcpy(result->data, builder.data, sizeof(struct pipelineConnection) * builder.qData);
+    memcpy(result->color, builder.color, sizeof(double) * 4);
     for (size_t i = 0; i < result->qData; i += 1) {
         while (result->renderPass != result->data[i].pipe->pipeline[result->data[i].pipeNum].core) result->data[i].pipeNum += 1;
 

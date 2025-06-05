@@ -10,6 +10,7 @@
 #include "pushConstantsBuffer.h"
 
 #include "MY_ASSERT.h"
+#include "vulkan/vulkan_core.h"
 
 static void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, VkExtent2D swapChainExtent, uint32_t currentFrame, uint16_t qRenderPass, struct renderPassObj *renderPass[qRenderPass]) {
     VkCommandBufferBeginInfo beginInfo = {
@@ -19,62 +20,26 @@ static void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageInd
         .pNext = NULL
     };
 
-    VkClearValue clearValues[][2] = {
-        {
-            [0].color.float32 = {
-                0.5f,
-                0.5f,
-                0.5f,
-                1.0f
-            },
-            [1].depthStencil = {
-                .depth = 1.0f,
-                .stencil = 0
-            }
-        },
-        {
-            [0].color.float32 = {
-                0.7f,
-                0.7f,
-                0.7f,
-                1.0f
-            },
-            [1].depthStencil = {
-                .depth = 1.0f,
-                .stencil = 0
-            }
-        },
-        {
-            [0].color.float32 = {
-                0.7f,
-                0.7f,
-                0.7f,
-                1.0f
-            },
-            [1].depthStencil = {
-                .depth = 1.0f,
-                .stencil = 0
-            }
-        },
-        {
-            [0].color.float32 = {
-                0.5f,
-                0.5f,
-                0.5f,
-                1.0f
-            },
-            [1].depthStencil = {
-                .depth = 1.0f,
-                .stencil = 0
-            }
-        },
-    };
-
+    VkClearValue clearValues[qRenderPass][2]; 
     VkRect2D renderArena[qRenderPass];
     VkRenderPassBeginInfo renderPassInfo[qRenderPass];
     VkViewport viewport[qRenderPass];
 
     for (size_t i = 0; i < qRenderPass; i += 1) {
+        clearValues[i][0] = (VkClearValue) {
+            .color.float32 = {
+                renderPass[i]->color[0],
+                renderPass[i]->color[1],
+                renderPass[i]->color[2],
+                renderPass[i]->color[3],
+            }
+        };
+        clearValues[i][1] = (VkClearValue) {
+            .depthStencil = {
+                .depth = 1.0f,
+                .stencil = 0
+            }
+        };
         renderArena[i] = (VkRect2D) {
             .offset = {
                 .x = (int32_t)(renderPass[i]->coordinates[0] * swapChainExtent.width),
@@ -90,8 +55,8 @@ static void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageInd
             .renderPass = renderPass[i]->renderPass->renderPass,
             .framebuffer = renderPass[i]->renderPass->swapChainFramebuffers[imageIndex],
             .renderArea = renderArena[i],
-            .clearValueCount = sizeof(clearValues) / sizeof(VkClearValue),
-            .pClearValues = clearValues[i % 4]
+            .clearValueCount = 2,
+            .pClearValues = clearValues[i]
         };
         viewport[i] = (VkViewport){
             .x = renderArena[i].offset.x,

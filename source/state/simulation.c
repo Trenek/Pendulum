@@ -110,11 +110,11 @@ void fun(int n, struct node *init, double (*result)[2]) {
 void update(
     float t,
     struct system *s,
-    struct instance *node[4][s->pendulumCount],
-    struct instance *line[4][s->pendulumCount]) {
+    struct instance *node[s->qMethod][s->pendulumCount],
+    struct instance *line[s->qMethod][s->pendulumCount]) {
     struct node (*nodee)[s->pendulumCount][s->nodeCount] = (void *)s->node;
 
-    for (int i = 0; i < 4; i += 1)
+    for (int i = 0; i < s->qMethod; i += 1)
     for (int j = 0; j < s->pendulumCount; j += 1) {
         s->method[i].f(s->nodeCount, nodee[i][j], t, fun);
 
@@ -168,19 +168,16 @@ void simulation(struct EngineCore *engine, enum state *state) {
     struct ResourceManager *entityData = findResource(&engine->resource, "Entity");
     struct ResourceManager *screenData = findResource(&engine->resource, "ScreenData");
 
-    struct Entity *entity[] = {
-        findResource(entityData, "Node0"),
-        findResource(entityData, "Line0"),
-        findResource(entityData, "Node1"),
-        findResource(entityData, "Line1"),
-        findResource(entityData, "Node2"),
-        findResource(entityData, "Line2"),
-        findResource(entityData, "Node3"),
-        findResource(entityData, "Line3"),
-        findResource(entityData, "Name 0"),
-        findResource(entityData, "Name 1"),
-        findResource(entityData, "Name 2"),
-        findResource(entityData, "Name 3"),
+    struct Entity *entity[p->qMethod * 3]; for (int i = 0; i < p->qMethod; i += 1) {
+        char buffer[3][50] = {};
+
+        sprintf(buffer[0], "Node%d", i);
+        sprintf(buffer[1], "Line%d", i);
+        sprintf(buffer[2], "Name %d", i);
+
+        entity[2 * i + 0] = findResource(entityData, buffer[0]);
+        entity[2 * i + 1] = findResource(entityData, buffer[1]);
+        entity[2 * p->qMethod + i] = findResource(entityData, buffer[2]);
     };
     size_t qEntity = sizeof(entity) / sizeof(struct Entity *);
 
@@ -191,22 +188,21 @@ void simulation(struct EngineCore *engine, enum state *state) {
     };
     size_t qRenderPassArr = sizeof(renderPassArr) / sizeof(struct renderPassCore *);
 
-    struct renderPassObj *renderPass[] = {
-        findResource(screenData, "Screen 0"),
-        findResource(screenData, "Screen 1"),
-        findResource(screenData, "Screen 2"),
-        findResource(screenData, "Screen 3"),
-        findResource(screenData, "Text Screen 0"),
-        findResource(screenData, "Text Screen 1"),
-        findResource(screenData, "Text Screen 2"),
-        findResource(screenData, "Text Screen 3"),
+    struct renderPassObj *renderPass[p->qMethod * 2]; for (int i = 0; i < p->qMethod; i += 1) {
+        char buffer[2][50] = {};
+
+        sprintf(buffer[0], "Screen %d", i);
+        sprintf(buffer[1], "Text Screen %d", i);
+
+        renderPass[i] = findResource(screenData, buffer[0]);
+        renderPass[p->qMethod + i] = findResource(screenData, buffer[1]);
     };
     size_t qRenderPass = sizeof(renderPass) / sizeof(struct renderPassObj *);
 
-    struct instance *node[4][M];
-    struct instance *line[4][M];
+    struct instance *node[p->qMethod][M];
+    struct instance *line[p->qMethod][M];
 
-    for (int i = 0; i < 4; i += 1) {
+    for (int i = 0; i < p->qMethod; i += 1) {
         node[i][0] = entity[2 * i + 0]->instance;
         line[i][0] = entity[2 * i + 1]->instance;
         for (int j = 1; j < M; j += 1) {
@@ -223,7 +219,7 @@ void simulation(struct EngineCore *engine, enum state *state) {
 
     {
         struct node (*nodee)[p->pendulumCount][p->nodeCount] = (void *)p->node;
-        for (int i = 0; i < 4; i += 1)
+        for (int i = 0; i < p->qMethod; i += 1)
         for (int j = 0; j < p->pendulumCount; j += 1) {
             updatePos(node[i][j], line[i][j], nodee[i][j], p->nodeCount);
         }
@@ -236,10 +232,9 @@ void simulation(struct EngineCore *engine, enum state *state) {
         if (isRunning) update(dTime, p, node, line);
 
         updateInstances(entity, qEntity, dTime);
-        moveCamera(&engine->window, engine->window.window, &renderPass[0]->camera, engine->deltaTime.deltaTime);
-        moveCamera(&engine->window, engine->window.window, &renderPass[1]->camera, engine->deltaTime.deltaTime);
-        moveCamera(&engine->window, engine->window.window, &renderPass[2]->camera, engine->deltaTime.deltaTime);
-        moveCamera(&engine->window, engine->window.window, &renderPass[3]->camera, engine->deltaTime.deltaTime);
+        for (int i = 0; i < p->qMethod; i += 1) {
+            moveCamera(&engine->window, engine->window.window, &renderPass[i]->camera, engine->deltaTime.deltaTime);
+        }
 
         drawFrame(engine, qRenderPass, renderPass, qRenderPassArr, renderPassArr);
         if ((KEY_PRESS | KEY_CHANGE) == getKeyState(&engine->window, GLFW_KEY_R)) {

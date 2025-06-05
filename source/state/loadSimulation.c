@@ -19,32 +19,44 @@ static void loadInput(struct EngineCore *this) {
 
     struct system *p = malloc(sizeof(struct system));
 
-    p->qMethod = 4;
-    p->method = malloc(sizeof(struct method));
+    p->qMethod = 6;
+    p->method = malloc(sizeof(struct method) * p->qMethod);
 
     p->method[0] = (struct method) {
         .name = "Euler",
-        .coords = { 0.0, 0.0, 0.5, 0.5 },
-        .color = { 0.5, 0.5, 0.5, 1.0 },
+        .coords = { 0.0, 0.0, 1.0 / 3.0, 0.5 },
+        .color = { 0.7, 0.7, 0.7, 1.0 },
         .f = euler
     };
     p->method[1] = (struct method) {
         .name = "Mod Euler",
-        .coords = { 0.5, 0.0, 0.5, 0.5 },
+        .coords = { 1.0 / 3.0, 0.0, 1.0 / 3.0, 0.5 },
         .color = { 0.5, 0.5, 0.5, 1.0 },
         .f = modified_euler
     };
     p->method[2] = (struct method) {
         .name = "Heun",
-        .coords = { 0.0, 0.5, 0.5, 0.5 },
-        .color = { 0.5, 0.5, 0.5, 1.0 },
+        .coords = { 2.0 / 3.0, 0.0, 1.0 / 3.0, 0.5 },
+        .color = { 0.7, 0.7, 0.7, 1.0 },
         .f = heun
     };
     p->method[3] = (struct method) {
         .name = "RK4",
-        .coords = { 0.5, 0.5, 0.5, 0.5 },
+        .coords = { 0.0, 0.5, 1.0 / 3.0, 0.5 },
         .color = { 0.5, 0.5, 0.5, 1.0 },
-        .f = heun
+        .f = rk4
+    };
+    p->method[4] = (struct method) {
+        .name = "RK5",
+        .coords = { 1.0 / 3.0, 0.5, 1.0 / 3.0, 0.5 },
+        .color = { 0.7, 0.7, 0.7, 1.0 },
+        .f = rk5
+    };
+    p->method[5] = (struct method) {
+        .name = "20 x RK5",
+        .coords = { 2.0 / 3.0, 0.5, 1.0 / 3.0, 0.5 },
+        .color = { 0.5, 0.5, 0.5, 1.0 },
+        .f = x20rk5
     };
 
     fscanf(file, "%f", &p->time);
@@ -106,7 +118,6 @@ static void addEntities(struct EngineCore *this) {
 
     for (int i = 0; i < p->qMethod; i += 1) {
         sprintf(buffer, "Node%d", i);
-        printf("%s\n", buffer);
         addResource(entityData, buffer, createModel((struct ModelBuilder) {
             .instanceCount = (p->nodeCount + 1) * p->pendulumCount,
             .modelData = findResource(modelData, "sphere"),
@@ -116,7 +127,6 @@ static void addEntities(struct EngineCore *this) {
         }, &this->graphics), destroyEntity);
 
         sprintf(buffer, "Line%d", i);
-        printf("%s\n", buffer);
         addResource(entityData, buffer, createModel((struct ModelBuilder) {
             .instanceCount = p->nodeCount * p->pendulumCount,
             .modelData = findResource(modelData, "line"),
@@ -126,7 +136,6 @@ static void addEntities(struct EngineCore *this) {
         }, &this->graphics), destroyEntity);
 
         sprintf(buffer, "Name %d", i);
-        printf("%s\n", buffer);
         addString(entityData, modelData, objectLayout, this, buffer, p->method[i].name);
     }
 
@@ -151,8 +160,7 @@ void loadScreens(struct EngineCore *this) {
         findResource(renderPassCoreData, "Stay")
     };
 
-    printf("Here\n");
-    char buffer[5][50];
+    char buffer[5][50] = {};
     for (int i = 0; i < p->qMethod; i += 1) {
         sprintf(buffer[0], "Screen %d", i);
         sprintf(buffer[1], "Node%d", i);
@@ -160,9 +168,14 @@ void loadScreens(struct EngineCore *this) {
         sprintf(buffer[3], "Text Screen %d", i);
         sprintf(buffer[4], "Name %d", i);
 
-        printf("%s\n", buffer[0]);
         addResource(screenData, buffer[0], createRenderPassObj((struct renderPassBuilder){
             .renderPass = renderPassArr[0],
+            .color = {
+                p->method[i].color[0],
+                p->method[i].color[1],
+                p->method[i].color[2],
+                p->method[i].color[3]
+            },
             .coordinates = {
                 p->method[i].coords[0],
                 p->method[i].coords[1],
@@ -182,7 +195,6 @@ void loadScreens(struct EngineCore *this) {
             .qData = 1,
             .updateCameraBuffer = updateFirstPersonCameraBuffer,
         }, &this->graphics), destroyRenderPassObj);
-        printf("%s\n", buffer[3]);
         addResource(screenData, buffer[3], createRenderPassObj((struct renderPassBuilder){
             .renderPass = renderPassArr[1],
             .coordinates = {
@@ -190,6 +202,12 @@ void loadScreens(struct EngineCore *this) {
                 p->method[i].coords[1],
                 p->method[i].coords[2],
                 p->method[i].coords[3],
+            },
+            .color = {
+                p->method[i].color[0],
+                p->method[i].color[1],
+                p->method[i].color[2],
+                p->method[i].color[3]
             },
             .data = (struct pipelineConnection[]) {
                 {
@@ -227,6 +245,8 @@ void loadScreens(struct EngineCore *this) {
             .shadow = false
         };
     }
+
+    addResource(&this->resource, "ScreenData", screenData, cleanupResources);
 }
 
 void loadSimulation(struct EngineCore *engine, enum state *state) {
@@ -234,7 +254,6 @@ void loadSimulation(struct EngineCore *engine, enum state *state) {
     addEntities(engine);
 
     loadScreens(engine);
-    printf("Loaded\n");
 
     *state = SIMULATION;
 }
