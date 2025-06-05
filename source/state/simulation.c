@@ -128,7 +128,7 @@ void initNode(struct instance *node, struct instance *line, struct node params[]
         glm_vec3_fill(node[i].pos, 0.0f);
         glm_vec3_fill(node[i].rotation, 0.0f);
         glm_vec3_fill(node[i].fixedRotation, 0.0f);
-        glm_vec3_fill(node[i].scale, (i == 2 ? 1 : params[i].mass) / 10);
+        glm_vec3_fill(node[i].scale, (i == N ? 1 : params[i].mass) / 10);
         node[i].textureIndex = 0;
         node[i].textureInc = 0;
         node[i].shadow = false;
