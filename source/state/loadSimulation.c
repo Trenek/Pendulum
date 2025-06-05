@@ -17,6 +17,10 @@ static void loadInput(struct EngineCore *this) {
 
     struct system *p = malloc(sizeof(struct system));
 
+    fscanf(file, "%f", &p->time);
+    fscanf(file, "%f %f %f", &p->pos[0], &p->pos[1], &p->pos[2]);
+    fscanf(file, "%f %f", &p->tilt[0], &p->tilt[1]);
+
     fscanf(file, "%d %d", &p->pendulumCount, &p->nodeCount);
 
     struct node (*node)[p->pendulumCount][p->nodeCount] = (void *)(p->node = malloc(sizeof(struct node) * p->pendulumCount * p->nodeCount * 4));
@@ -24,12 +28,12 @@ static void loadInput(struct EngineCore *this) {
     for (int i = 0; i < p->pendulumCount; i += 1) {
         for (int j = 0; j < p->nodeCount; j += 1) {
             fscanf(file, "%lf %lf %lf %lf", 
-                &node[0][i][j].angle,
-                &node[0][i][j].angularVelocity,
+                &node[0][i][j].th,
+                &node[0][i][j].dth,
                 &node[0][i][j].mass, 
                 &node[0][i][j].length
             );
-            node[0][i][j].angle = glm_rad(node[0][i][j].angle);
+            node[0][i][j].th = glm_rad(node[0][i][j].th);
             for (int k = 1; k < 4; k += 1) {
                 node[k][i][j] = node[0][i][j];
             }
@@ -113,6 +117,7 @@ void loadScreens(struct EngineCore *this) {
 
     struct ResourceManager *graphicsPipelineData = findResource(&this->resource, "graphicPipelines");
     struct ResourceManager *entityData = findResource(&this->resource, "Entity");
+    struct system *p = findResource(&this->resource, "Pendulum");
 
     struct graphicsPipeline *pipe[] = {
         findResource(graphicsPipelineData, "Floor"),
@@ -200,10 +205,20 @@ void loadScreens(struct EngineCore *this) {
         .updateCameraBuffer = updateFirstPersonCameraBuffer
     }, &this->graphics), destroyRenderPassObj);
 
-    ((struct renderPassObj *)findResource(screenData, "One"))->camera = initCamera();
-    ((struct renderPassObj *)findResource(screenData, "Two") )->camera = initCamera();
-    ((struct renderPassObj *)findResource(screenData, "Three"))->camera = initCamera();
-    ((struct renderPassObj *)findResource(screenData, "Four"))->camera = initCamera();
+    struct camera *camera[] = {
+        &((struct renderPassObj *)findResource(screenData, "One"))->camera,
+        &((struct renderPassObj *)findResource(screenData, "Two") )->camera,
+        &((struct renderPassObj *)findResource(screenData, "Three"))->camera,
+        &((struct renderPassObj *)findResource(screenData, "Four"))->camera
+    };
+
+    for (int i = 0; i < 4; i += 1) {
+        camera[i]->pos[0] = p->pos[0];
+        camera[i]->pos[1] = p->pos[1];
+        camera[i]->pos[2] = p->pos[2];
+        camera[i]->tilt[0] = p->tilt[0];
+        camera[i]->tilt[1] = p->tilt[1];
+    };
 
     addResource(&this->resource, "ScreenData", screenData, cleanupResources);
 }

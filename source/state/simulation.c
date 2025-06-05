@@ -18,20 +18,20 @@
 #define g 9.81
 
 void updatePos(struct instance *node, struct instance *line, struct node *params, int N) {
-    node[0].pos[0] = +params[0].length * sin(params[0].angle);
-    node[0].pos[2] = -params[0].length * cos(params[0].angle);
+    node[0].pos[0] = +params[0].length * sin(params[0].th);
+    node[0].pos[2] = -params[0].length * cos(params[0].th);
     for (int i = 1; i < N; i += 1) {
-        node[i].pos[0] = node[i - 1].pos[0] + params[i].length * sin(params[i].angle);
-        node[i].pos[2] = node[i - 1].pos[2] - params[i].length * cos(params[i].angle);
+        node[i].pos[0] = node[i - 1].pos[0] + params[i].length * sin(params[i].th);
+        node[i].pos[2] = node[i - 1].pos[2] - params[i].length * cos(params[i].th);
     }
 
     line[0].pos[0] = node[0].pos[0] / 2;
     line[0].pos[2] = node[0].pos[2] / 2;
-    line[0].fixedRotation[1] = -params[0].angle;
+    line[0].fixedRotation[1] = -params[0].th;
     for (int i = 0; i < N - 1; i += 1) {
         glm_vec3_lerp(node[i].pos, node[i + 1].pos, 0.5f, line[i + 1].pos);
 
-        line[i + 1].fixedRotation[1] = -params[i + 1].angle;
+        line[i + 1].fixedRotation[1] = -params[i + 1].th;
     }
 
     for (int i = 0; i < N; i += 1) {
@@ -39,87 +39,72 @@ void updatePos(struct instance *node, struct instance *line, struct node *params
     }
 }
 
-// θ`` + g * sin(θ) / l = 0
-// 
-// θ_1 = θ
-// θ_2 = θ`
-//
-// θ_1` = θ_2
-// θ_2` = - g * sin(θ_1)
-void fun1(struct node *init, double (*result)[2]) {
-    result[0][0] = init[0].angularVelocity;
-    result[0][1] = -g * sin(init[0].angle);
+int sigma(int j, int k) {
+    return j <= k;
 }
 
-void fun21(struct node *initPtr, double (*result)[2]) {
-    struct node *init = initPtr + 1;
+int sign(int j, int k) {
+    return j != k;
+}
 
-    double A = (init[1].mass + init[2].mass) * init[1].length * init[1].length;
-    double B = init[2].mass * init[1].length * init[2].length * cos(init[1].angle - init[2].angle);
-    double C = (
-        init[2].mass * init[1].length * init[2].length * init[2].angularVelocity * init[2].angularVelocity * sin(init[1].angle - init[2].angle) +
-        (init[1].mass + init[2].mass) * init[1].length * g * sin(init[1].angle)
-    );
-    double D = init[2].mass * init[2].length * init[2].length;
-    double E = init[2].mass * init[1].length * init[2].length * cos(init[1].angle - init[2].angle);
-    double F = (
-        init[2].mass * init[2].length * g * sin(init[2].angle) -
-        init[2].mass * init[1].length * init[2].length * init[1].angularVelocity * init[1].angularVelocity * sin(init[1].angle - init[2].angle)
-    );
+void fun(int n, struct node *init, double (*result)[2]) {
+    double l[n]; for (int j = 0; j < n; j += 1) {
+        l[j] = init[j].length;
+    }
+    double m[n]; for (int j = 0; j < n; j += 1) {
+        m[j] = init[j].mass;
+    }
+    double th[n]; for (int j = 0; j < n; j += 1) {
+        th[j] = init[j].th;
+    }
+    double dth[n]; for (int j = 0; j < n; j += 1) {
+        dth[j] = init[j].dth;
+    }
 
-    double AArr[] = {
-        A, B,
-        D, E
-    };
-    double BArr[] = {
-        C,
-        F
-    };
+    double A[n][n] = {};
+    double B[n] = {};
 
-    gsl_matrix_view A_view = gsl_matrix_view_array(AArr, 2, 2);
-    gsl_vector_view b_view = gsl_vector_view_array(BArr, 2);
-    gsl_vector *x = gsl_vector_alloc(2);
-    gsl_permutation *p = gsl_permutation_alloc(2);
+    gsl_matrix_view A_view = gsl_matrix_view_array((double *)A, n, n);
+    gsl_vector_view b_view = gsl_vector_view_array(B, n);
+    gsl_vector *x = gsl_vector_alloc(n);
+    gsl_permutation *p = gsl_permutation_alloc(n);
     int signum = 0;
+
+    for (int j = 0; j < n; j += 1) {
+        for (int k = 0; k < n; k += 1) {
+            float sum = 0;
+            for (int q = k; q < n; q += 1) {
+                if (sigma(j, q)) {
+                    sum += m[q];
+                }
+            }
+            sum *= l[j] * l[k];
+
+            B[j] -= (
+                sum * sin(th[j] - th[k]) * dth[j] * dth[k] +
+                sum * sin(th[k] - th[j]) * (dth[j] - dth[k]) * dth[k]
+            );
+
+            if (sigma(j, k)) {
+                B[j] -= g * l[j] * sin(th[j]) * m[k];
+                A[j][j] += m[k] * pow(l[j], 2);
+            }
+            if (sign(j, k)) {
+                A[j][k] += sum * cos(th[j] - th[k]);
+            }
+        }
+    }
 
     gsl_linalg_LU_decomp(&A_view.matrix, p, &signum);
     gsl_linalg_LU_solve(&A_view.matrix, p, &b_view.vector, x);
 
-    result[0][0] = init[1].angularVelocity;
-    result[0][1] = gsl_vector_get(x, 0);
-    result[1][0] = init[2].angularVelocity;
-    result[1][1] = gsl_vector_get(x, 1);
+    for (int j = 0; j < n; j += 1) {
+        result[j][0] = init[j].dth;
+        result[j][1] = gsl_vector_get(x, j);
+    }
 
     gsl_vector_free(x);
     gsl_permutation_free(p);
-}
-
-void fun2(struct node *init, double (*result)[2]) {
-    double deltaT = init[0].angle - init[1].angle;
-    double alfa = init[0].mass + init[1].mass * sin(deltaT) * sin(deltaT);
-    double M = init[0].mass + init[1].mass;
-
-    result[0][0] = fmod(init[0].angularVelocity, 2 * M_PI);
-    result[0][1] = (
-        -sin(deltaT) * init[1].mass * (
-            init[0].length * init[0].angularVelocity * init[0].angularVelocity * cos(deltaT) +
-            init[1].length * init[1].angularVelocity * init[1].angularVelocity
-        ) - g * (
-            M  * sin(init[0].angle) -
-            init[1].mass * sin(init[1].angle) * cos(deltaT)
-        )
-    ) / (alfa * init[0].length);
-
-    result[1][0] = fmod(init[1].angularVelocity, 2 * M_PI);
-    result[1][1] = (
-        sin(deltaT) * (
-            M * init[0].length * init[0].angularVelocity * init[0].angularVelocity +
-            init[1].mass * init[1].length * init[1].angularVelocity * init[1].angularVelocity * cos(deltaT)
-        ) + g * (
-            M  * sin(init[0].angle) * cos(deltaT) -
-            M * sin(init[1].angle)
-        )
-    ) / (alfa * init[1].length);
 }
 
 void update(
@@ -127,16 +112,12 @@ void update(
     struct system *s,
     struct instance *node[4][s->pendulumCount],
     struct instance *line[4][s->pendulumCount],
-    void (**f)(int N, struct node *init, double t, void (*fun)(struct node *init, double (*result)[2]))) {
+    void (**f)(int N, struct node *init, double t, void (*fun)(int n, struct node *init, double (*result)[2]))) {
     struct node (*nodee)[s->pendulumCount][s->nodeCount] = (void *)s->node;
-    void (*fun[])(struct node *init, double (*result)[2]) = {
-        fun1,
-        fun21
-    };
 
     for (int i = 0; i < 4; i += 1)
     for (int j = 0; j < s->pendulumCount; j += 1) {
-        f[i](s->nodeCount, nodee[i][j], t, fun[s->nodeCount - 1]);
+        f[i](s->nodeCount, nodee[i][j], t, fun);
 
         updatePos(node[i][j], line[i][j], nodee[i][j], s->nodeCount);
     }
@@ -232,19 +213,20 @@ void simulation(struct EngineCore *engine, enum state *state) {
     while (*state == SIMULATION && !shouldWindowClose(engine->window)) {
         glfwPollEvents();
 
-        void (*f[])(int, struct node *, double, void (*)(struct node *, double (*)[2])) = {
+        void (*f[])(int, struct node *, double, void (*)(int n, struct node *, double (*)[2])) = {
             euler,
             heun,
-            modified_euler,
+            rk5,
             rk4
         };
-        if (isRunning) update(engine->deltaTime.deltaTime, p, node, line, f);
+        float dTime = p->time * engine->deltaTime.deltaTime;
+        if (isRunning) update(dTime, p, node, line, f);
 
-        updateInstances(entity, qEntity, engine->deltaTime.deltaTime);
-        moveCamera(&engine->window, engine->window.window, &renderPass[0]->camera, engine->deltaTime.deltaTime);
-        moveCamera(&engine->window, engine->window.window, &renderPass[1]->camera, engine->deltaTime.deltaTime);
-        moveCamera(&engine->window, engine->window.window, &renderPass[2]->camera, engine->deltaTime.deltaTime);
-        moveCamera(&engine->window, engine->window.window, &renderPass[3]->camera, engine->deltaTime.deltaTime);
+        updateInstances(entity, qEntity, dTime);
+        moveCamera(&engine->window, engine->window.window, &renderPass[0]->camera, dTime);
+        moveCamera(&engine->window, engine->window.window, &renderPass[1]->camera, dTime);
+        moveCamera(&engine->window, engine->window.window, &renderPass[2]->camera, dTime);
+        moveCamera(&engine->window, engine->window.window, &renderPass[3]->camera, dTime);
 
         drawFrame(engine, qRenderPass, renderPass, qRenderPassArr, renderPassArr);
         if ((KEY_PRESS | KEY_CHANGE) == getKeyState(&engine->window, GLFW_KEY_R)) {
