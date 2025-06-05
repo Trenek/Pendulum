@@ -166,3 +166,11 @@ void rk5(int N, struct node *init, double t, void (*fun)(int, struct node *, dou
         init[i].dth += (7 * k1[i][1] + 32 * k3[i][1] + 12 * k4[i][1] + 32 * k5[i][1] + 7 * k6[i][1]) / 90;
     }
 }
+
+
+void x20rk5(int N, struct node *init, double t, void (*fun)(int, struct node *, double (*)[2])) {
+    int n = 20;
+    for (int i = 0; i < n; i += 1) {
+        rk5(N, init, t / n, fun);
+    }
+}

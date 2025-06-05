@@ -111,13 +111,12 @@ void update(
     float t,
     struct system *s,
     struct instance *node[4][s->pendulumCount],
-    struct instance *line[4][s->pendulumCount],
-    void (**f)(int N, struct node *init, double t, void (*fun)(int n, struct node *init, double (*result)[2]))) {
+    struct instance *line[4][s->pendulumCount]) {
     struct node (*nodee)[s->pendulumCount][s->nodeCount] = (void *)s->node;
 
     for (int i = 0; i < 4; i += 1)
     for (int j = 0; j < s->pendulumCount; j += 1) {
-        f[i](s->nodeCount, nodee[i][j], t, fun);
+        s->method[i].f(s->nodeCount, nodee[i][j], t, fun);
 
         updatePos(node[i][j], line[i][j], nodee[i][j], s->nodeCount);
     }
@@ -170,18 +169,18 @@ void simulation(struct EngineCore *engine, enum state *state) {
     struct ResourceManager *screenData = findResource(&engine->resource, "ScreenData");
 
     struct Entity *entity[] = {
+        findResource(entityData, "Node0"),
+        findResource(entityData, "Line0"),
         findResource(entityData, "Node1"),
         findResource(entityData, "Line1"),
         findResource(entityData, "Node2"),
         findResource(entityData, "Line2"),
         findResource(entityData, "Node3"),
         findResource(entityData, "Line3"),
-        findResource(entityData, "Node4"),
-        findResource(entityData, "Line4"),
+        findResource(entityData, "Name 0"),
         findResource(entityData, "Name 1"),
         findResource(entityData, "Name 2"),
         findResource(entityData, "Name 3"),
-        findResource(entityData, "Name 4"),
     };
     size_t qEntity = sizeof(entity) / sizeof(struct Entity *);
 
@@ -193,14 +192,14 @@ void simulation(struct EngineCore *engine, enum state *state) {
     size_t qRenderPassArr = sizeof(renderPassArr) / sizeof(struct renderPassCore *);
 
     struct renderPassObj *renderPass[] = {
-        findResource(screenData, "One"),
-        findResource(screenData, "Two"),
-        findResource(screenData, "Three"),
-        findResource(screenData, "Four"),
-        findResource(screenData, "NOne"),
-        findResource(screenData, "NTwo"),
-        findResource(screenData, "NThree"),
-        findResource(screenData, "NFour"),
+        findResource(screenData, "Screen 0"),
+        findResource(screenData, "Screen 1"),
+        findResource(screenData, "Screen 2"),
+        findResource(screenData, "Screen 3"),
+        findResource(screenData, "Text Screen 0"),
+        findResource(screenData, "Text Screen 1"),
+        findResource(screenData, "Text Screen 2"),
+        findResource(screenData, "Text Screen 3"),
     };
     size_t qRenderPass = sizeof(renderPass) / sizeof(struct renderPassObj *);
 
@@ -233,14 +232,8 @@ void simulation(struct EngineCore *engine, enum state *state) {
     while (*state == SIMULATION && !shouldWindowClose(engine->window)) {
         glfwPollEvents();
 
-        void (*f[])(int, struct node *, double, void (*)(int n, struct node *, double (*)[2])) = {
-            euler,
-            heun,
-            rk5,
-            rk4
-        };
         float dTime = p->time * engine->deltaTime.deltaTime;
-        if (isRunning) update(dTime, p, node, line, f);
+        if (isRunning) update(dTime, p, node, line);
 
         updateInstances(entity, qEntity, dTime);
         moveCamera(&engine->window, engine->window.window, &renderPass[0]->camera, engine->deltaTime.deltaTime);
