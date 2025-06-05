@@ -12,6 +12,7 @@ struct instanceBuffer {
     uint32_t textureIndex;
     mat4 modelMatrix;
     bool shadow;
+    vec4 color;
 };
 
 struct instance {
@@ -22,6 +23,7 @@ struct instance {
     vec3 fixedRotation;
     vec3 scale;
     bool shadow;
+    vec4 color;
 };
 
 struct playerInstanceBuffer {

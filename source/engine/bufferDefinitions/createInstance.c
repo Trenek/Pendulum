@@ -18,6 +18,7 @@ void instanceUpdater(void *instancePtr, void *instanceBufferPtr, uint32_t instan
         glm_scale(instanceBuffer[i].modelMatrix, instance[i].scale);
         instanceBuffer[i].textureIndex = instance[i].textureIndex + instance[i].textureInc;
         instanceBuffer[i].shadow = instance[i].shadow;
+        glm_vec4_dup(instance[i].color, instanceBuffer[i].color);
     }
 }
 

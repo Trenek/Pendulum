@@ -9,6 +9,7 @@ struct system {
     float time;
     float pos[3];
     float tilt[2];
+
     int pendulumCount;
     int nodeCount;
 

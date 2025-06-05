@@ -20,7 +20,7 @@ void heun(int N, struct node *init, double t, void (*fun)(int, struct node *, do
 
     for (int i = 0; i < N; i += 1) {
         temp[i].th = init[i].th + t * k1[i][0];
-        temp[i].dth += init[i].dth + t * k1[i][1];
+        temp[i].dth = init[i].dth + t * k1[i][1];
         temp[i].length = init[i].length;
         temp[i].mass = init[i].mass;
     }

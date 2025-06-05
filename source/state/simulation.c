@@ -128,16 +128,24 @@ void initNode(struct instance *node, struct instance *line, struct node params[]
         glm_vec3_fill(node[i].pos, 0.0f);
         glm_vec3_fill(node[i].rotation, 0.0f);
         glm_vec3_fill(node[i].fixedRotation, 0.0f);
+        glm_vec3_fill(node[i].color, 0.0f);
         glm_vec3_fill(node[i].scale, (i == N ? 1 : params[i].mass) / 10);
         node[i].textureIndex = 0;
         node[i].textureInc = 0;
         node[i].shadow = false;
+
+        node[i].color[0] = 0.0;
+        node[i].color[2] = 0.0;
+        node[i].color[1] = 1.0;
+
+        node[i].color[3] = 1;
     }
 
     for (int i = 0; i < N; i += 1) {
         glm_vec3_fill(line[i].pos, 0.0f);
         glm_vec3_fill(line[i].rotation, 0.0f);
         glm_vec3_fill(line[i].scale, 0.25f);
+        glm_vec3_fill(line[i].color, 0.0f);
         glm_vec3_fill(line[i].fixedRotation, 0.0f);
         line[i].scale[1] = params[i].length;
         line[i].textureIndex = 1;
@@ -145,6 +153,10 @@ void initNode(struct instance *node, struct instance *line, struct node params[]
         line[i].shadow = false;
         line[i].fixedRotation[2] = glm_rad(-90);
         line[i].fixedRotation[1] = glm_rad(-90);
+
+        line[i].color[0] = 1;
+
+        line[i].color[3] = 1;
     }
 }
 
@@ -166,6 +178,10 @@ void simulation(struct EngineCore *engine, enum state *state) {
         findResource(entityData, "Line3"),
         findResource(entityData, "Node4"),
         findResource(entityData, "Line4"),
+        findResource(entityData, "Name 1"),
+        findResource(entityData, "Name 2"),
+        findResource(entityData, "Name 3"),
+        findResource(entityData, "Name 4"),
     };
     size_t qEntity = sizeof(entity) / sizeof(struct Entity *);
 
@@ -181,6 +197,10 @@ void simulation(struct EngineCore *engine, enum state *state) {
         findResource(screenData, "Two"),
         findResource(screenData, "Three"),
         findResource(screenData, "Four"),
+        findResource(screenData, "NOne"),
+        findResource(screenData, "NTwo"),
+        findResource(screenData, "NThree"),
+        findResource(screenData, "NFour"),
     };
     size_t qRenderPass = sizeof(renderPass) / sizeof(struct renderPassObj *);
 
@@ -223,10 +243,10 @@ void simulation(struct EngineCore *engine, enum state *state) {
         if (isRunning) update(dTime, p, node, line, f);
 
         updateInstances(entity, qEntity, dTime);
-        moveCamera(&engine->window, engine->window.window, &renderPass[0]->camera, dTime);
-        moveCamera(&engine->window, engine->window.window, &renderPass[1]->camera, dTime);
-        moveCamera(&engine->window, engine->window.window, &renderPass[2]->camera, dTime);
-        moveCamera(&engine->window, engine->window.window, &renderPass[3]->camera, dTime);
+        moveCamera(&engine->window, engine->window.window, &renderPass[0]->camera, engine->deltaTime.deltaTime);
+        moveCamera(&engine->window, engine->window.window, &renderPass[1]->camera, engine->deltaTime.deltaTime);
+        moveCamera(&engine->window, engine->window.window, &renderPass[2]->camera, engine->deltaTime.deltaTime);
+        moveCamera(&engine->window, engine->window.window, &renderPass[3]->camera, engine->deltaTime.deltaTime);
 
         drawFrame(engine, qRenderPass, renderPass, qRenderPassArr, renderPassArr);
         if ((KEY_PRESS | KEY_CHANGE) == getKeyState(&engine->window, GLFW_KEY_R)) {

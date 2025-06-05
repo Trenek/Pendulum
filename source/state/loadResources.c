@@ -30,6 +30,7 @@ static void addModelData(struct EngineCore *this) {
 
     addResource(modelData, "sphere", loadModel("models/sphere.obj", &this->graphics), destroyActualModel);
     addResource(modelData, "line", loadModel("models/cylinder.glb", &this->graphics), destroyActualModel);
+    addResource(modelData, "font", loadModel("fonts/c.ttf", &this->graphics), destroyActualModel);
 
     addResource(&this->resource, "modelData", modelData, cleanupResources);
 }
@@ -106,6 +107,24 @@ static void createGraphicPipelines(struct EngineCore *this) {
         .objectLayout = objectLayout->descriptorSetLayout,
 
         Vert(AnimVertex),
+        .operation = VK_COMPARE_OP_LESS,
+        .cullFlags = VK_CULL_MODE_BACK_BIT,
+
+        .cameraLayout = cameraLayout->descriptorSetLayout
+    }, &this->graphics), destroyObjGraphicsPipeline);
+    addResource(graphicPipelinesData, "Text", createObjGraphicsPipeline((struct graphicsPipelineBuilder) {
+        .qRenderPassCore = qRenderPass,
+        .renderPassCore = renderPass,
+        .vertexShader = "shaders/text2dV.spv",
+        .fragmentShader = "shaders/textF.spv",
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f,
+        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+
+        .texture = &colorTexture->descriptor,
+        .objectLayout = objectLayout->descriptorSetLayout,
+
+        Vert(FontVertex),
         .operation = VK_COMPARE_OP_LESS,
         .cullFlags = VK_CULL_MODE_BACK_BIT,
 

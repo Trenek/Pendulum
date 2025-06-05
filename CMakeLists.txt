@@ -70,8 +70,10 @@ set(SHADER_SRC "${CMAKE_SOURCE_DIR}/shaders")
 set(SHADER_DST "${CMAKE_BINARY_DIR}/shaders")
 
 add_custom_command(TARGET shaders POST_BUILD
-    COMMAND glslc ${CMAKE_SOURCE_DIR}/shaders/shader.vert -o ${CMAKE_BINARY_DIR}/shaders/vert.spv
-    COMMAND glslc ${CMAKE_SOURCE_DIR}/shaders/shader2.frag -o ${CMAKE_BINARY_DIR}/shaders/frag2.spv
+    COMMAND glslc ${SHADER_SRC}/shader.vert -o ${SHADER_DST}/vert.spv
+    COMMAND glslc ${SHADER_SRC}/shader2.frag -o ${SHADER_DST}/frag2.spv
+    COMMAND glslc ${SHADER_SRC}/text2d.vert -o ${SHADER_DST}/text2dV.spv
+    COMMAND glslc ${SHADER_SRC}/text.frag -o ${SHADER_DST}/textF.spv
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/textures ${CMAKE_BINARY_DIR}/textures
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/models ${CMAKE_BINARY_DIR}/models
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/fonts ${CMAKE_BINARY_DIR}/fonts

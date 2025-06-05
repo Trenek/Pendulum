@@ -19,17 +19,55 @@ static void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageInd
         .pNext = NULL
     };
 
-    VkClearValue clearValues[] = {
-        [0].color.float32 = {
-            0.0f,
-            0.0f,
-            0.0f,
-            1.0f
+    VkClearValue clearValues[][2] = {
+        {
+            [0].color.float32 = {
+                0.5f,
+                0.5f,
+                0.5f,
+                1.0f
+            },
+            [1].depthStencil = {
+                .depth = 1.0f,
+                .stencil = 0
+            }
         },
-        [1].depthStencil = {
-            .depth = 1.0f,
-            .stencil = 0
-        }
+        {
+            [0].color.float32 = {
+                0.7f,
+                0.7f,
+                0.7f,
+                1.0f
+            },
+            [1].depthStencil = {
+                .depth = 1.0f,
+                .stencil = 0
+            }
+        },
+        {
+            [0].color.float32 = {
+                0.7f,
+                0.7f,
+                0.7f,
+                1.0f
+            },
+            [1].depthStencil = {
+                .depth = 1.0f,
+                .stencil = 0
+            }
+        },
+        {
+            [0].color.float32 = {
+                0.5f,
+                0.5f,
+                0.5f,
+                1.0f
+            },
+            [1].depthStencil = {
+                .depth = 1.0f,
+                .stencil = 0
+            }
+        },
     };
 
     VkRect2D renderArena[qRenderPass];
@@ -53,7 +91,7 @@ static void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageInd
             .framebuffer = renderPass[i]->renderPass->swapChainFramebuffers[imageIndex],
             .renderArea = renderArena[i],
             .clearValueCount = sizeof(clearValues) / sizeof(VkClearValue),
-            .pClearValues = clearValues
+            .pClearValues = clearValues[i % 4]
         };
         viewport[i] = (VkViewport){
             .x = renderArena[i].offset.x,
