@@ -233,7 +233,7 @@ void simulation(struct EngineCore *engine, enum state *state) {
 
         updateInstances(entity, qEntity, dTime);
         for (int i = 0; i < p->qMethod; i += 1) {
-            moveCamera(&engine->window, engine->window.window, &renderPass[i]->camera, engine->deltaTime.deltaTime);
+            moveCamera(&engine->window, &renderPass[i]->camera, engine->deltaTime.deltaTime);
         }
 
         drawFrame(engine, qRenderPass, renderPass, qRenderPassArr, renderPassArr);

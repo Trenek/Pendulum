@@ -139,7 +139,7 @@ static void addEntities(struct EngineCore *this) {
         addString(entityData, modelData, objectLayout, this, buffer, p->method[i].name);
     }
 
-    addResource(&this->resource, "Entity", entityData, cleanupResources);
+    addResource(&this->resource, "Entity", entityData, cleanupResourceManager);
 }
 
 void loadScreens(struct EngineCore *this) {
@@ -230,8 +230,9 @@ void loadScreens(struct EngineCore *this) {
             camera[j]->pos[0] = p->pos[0];
             camera[j]->pos[1] = p->pos[1];
             camera[j]->pos[2] = p->pos[2];
-            camera[j]->tilt[0] = p->tilt[0];
-            camera[j]->tilt[1] = p->tilt[1];
+            camera[j]->direction[0] = 0;
+            camera[j]->direction[1] = -1;
+            camera[j]->direction[2] = 0;
         };
 
         struct instance *text = ((struct Entity *)findResource(entityData, buffer[4]))->instance;
@@ -246,7 +247,7 @@ void loadScreens(struct EngineCore *this) {
         };
     }
 
-    addResource(&this->resource, "ScreenData", screenData, cleanupResources);
+    addResource(&this->resource, "ScreenData", screenData, cleanupResourceManager);
 }
 
 void loadSimulation(struct EngineCore *engine, enum state *state) {
