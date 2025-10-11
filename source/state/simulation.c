@@ -13,25 +13,25 @@
 
 #include "renderPassObj.h"
 
-#include "pendulum.h"
+#include "system.h"
 
 #define g 9.81
 
-void updatePos(struct instance *node, struct instance *line, struct node *params, int N) {
-    node[0].pos[0] = +params[0].length * sin(params[0].th);
-    node[0].pos[2] = -params[0].length * cos(params[0].th);
+void updatePos(struct instance *node, struct instance *line, struct variables *var, struct params *params, int N) {
+    node[0].pos[0] = +params[0].length * sin(var[0].th);
+    node[0].pos[2] = -params[0].length * cos(var[0].th);
     for (int i = 1; i < N; i += 1) {
-        node[i].pos[0] = node[i - 1].pos[0] + params[i].length * sin(params[i].th);
-        node[i].pos[2] = node[i - 1].pos[2] - params[i].length * cos(params[i].th);
+        node[i].pos[0] = node[i - 1].pos[0] + params[i].length * sin(var[i].th);
+        node[i].pos[2] = node[i - 1].pos[2] - params[i].length * cos(var[i].th);
     }
 
     line[0].pos[0] = node[0].pos[0] / 2;
     line[0].pos[2] = node[0].pos[2] / 2;
-    line[0].fixedRotation[1] = -params[0].th;
+    line[0].fixedRotation[1] = -var[0].th;
     for (int i = 0; i < N - 1; i += 1) {
         glm_vec3_lerp(node[i].pos, node[i + 1].pos, 0.5f, line[i + 1].pos);
 
-        line[i + 1].fixedRotation[1] = -params[i + 1].th;
+        line[i + 1].fixedRotation[1] = -var[i + 1].th;
     }
 
     for (int i = 0; i < N; i += 1) {
@@ -39,26 +39,26 @@ void updatePos(struct instance *node, struct instance *line, struct node *params
     }
 }
 
-int sigma(int j, int k) {
+static inline int sigma(int j, int k) {
     return j <= k;
 }
 
-int sign(int j, int k) {
+static inline int sign(int j, int k) {
     return j != k;
 }
 
-void fun(int n, struct node *init, double (*result)[2]) {
-    double l[n]; for (int j = 0; j < n; j += 1) {
-        l[j] = init[j].length;
+void fun(uint32_t n, struct variables var[n], struct params params[n], struct variables result[n]) {
+    double l[n]; for (uint32_t j = 0; j < n; j += 1) {
+        l[j] = params[j].length;
     }
-    double m[n]; for (int j = 0; j < n; j += 1) {
-        m[j] = init[j].mass;
+    double m[n]; for (uint32_t j = 0; j < n; j += 1) {
+        m[j] = params[j].mass;
     }
-    double th[n]; for (int j = 0; j < n; j += 1) {
-        th[j] = init[j].th;
+    double th[n]; for (uint32_t j = 0; j < n; j += 1) {
+        th[j] = var[j].th;
     }
-    double dth[n]; for (int j = 0; j < n; j += 1) {
-        dth[j] = init[j].dth;
+    double dth[n]; for (uint32_t j = 0; j < n; j += 1) {
+        dth[j] = var[j].dth;
     }
 
     double A[n][n] = {};
@@ -70,10 +70,10 @@ void fun(int n, struct node *init, double (*result)[2]) {
     gsl_permutation *p = gsl_permutation_alloc(n);
     int signum = 0;
 
-    for (int j = 0; j < n; j += 1) {
-        for (int k = 0; k < n; k += 1) {
+    for (uint32_t j = 0; j < n; j += 1) {
+        for (uint32_t k = 0; k < n; k += 1) {
             float sum = 0;
-            for (int q = k; q < n; q += 1) {
+            for (uint32_t q = k; q < n; q += 1) {
                 if (sigma(j, q)) {
                     sum += m[q];
                 }
@@ -98,9 +98,9 @@ void fun(int n, struct node *init, double (*result)[2]) {
     gsl_linalg_LU_decomp(&A_view.matrix, p, &signum);
     gsl_linalg_LU_solve(&A_view.matrix, p, &b_view.vector, x);
 
-    for (int j = 0; j < n; j += 1) {
-        result[j][0] = init[j].dth;
-        result[j][1] = gsl_vector_get(x, j);
+    for (uint32_t j = 0; j < n; j += 1) {
+        result[j].th = var[j].dth;
+        result[j].dth = gsl_vector_get(x, j);
     }
 
     gsl_vector_free(x);
@@ -112,17 +112,18 @@ void update(
     struct system *s,
     struct instance *node[s->qMethod][s->pendulumCount],
     struct instance *line[s->qMethod][s->pendulumCount]) {
-    struct node (*nodee)[s->pendulumCount][s->nodeCount] = (void *)s->node;
+    struct variables (*var)[s->pendulumCount][s->nodeCount] = (void *)s->var;
+    struct params (*params)[s->pendulumCount][s->nodeCount] = (void *)s->params;
 
     for (int i = 0; i < s->qMethod; i += 1)
     for (int j = 0; j < s->pendulumCount; j += 1) {
-        s->method[i].f(s->nodeCount, nodee[i][j], t, fun);
+        s->method[i].method(s->nodeCount, var[i][j], params[i][j], t, fun);
 
-        updatePos(node[i][j], line[i][j], nodee[i][j], s->nodeCount);
+        updatePos(node[i][j], line[i][j], var[i][j], params[i][j], s->nodeCount);
     }
 }
 
-void initNode(struct instance *node, struct instance *line, struct node params[], int N) {
+void initNode(struct instance *node, struct instance *line, struct params *params, int N) {
     for (int i = 0; i < N + 1; i += 1) {
         glm_vec3_fill(node[i].pos, 0.0f);
         glm_vec3_fill(node[i].rotation, 0.0f);
@@ -163,7 +164,8 @@ void simulation(struct EngineCore *engine, enum state *state) {
     struct system *p = findResource(&engine->resource, "Pendulum");
     int M = p->pendulumCount;
     int N = p->nodeCount;
-    struct node (*params)[M][N] = (void *)p->node;
+    struct variables (*var)[M][N] = (void *)p->var;
+    struct params (*params)[M][N] = (void *)p->params;
 
     struct ResourceManager *entityData = findResource(&engine->resource, "Entity");
     struct ResourceManager *screenData = findResource(&engine->resource, "ScreenData");
@@ -218,10 +220,9 @@ void simulation(struct EngineCore *engine, enum state *state) {
     bool isRunning = false;
 
     {
-        struct node (*nodee)[p->pendulumCount][p->nodeCount] = (void *)p->node;
         for (int i = 0; i < p->qMethod; i += 1)
         for (int j = 0; j < p->pendulumCount; j += 1) {
-            updatePos(node[i][j], line[i][j], nodee[i][j], p->nodeCount);
+            updatePos(node[i][j], line[i][j], var[i][j], params[i][j], p->nodeCount);
         }
     }
 

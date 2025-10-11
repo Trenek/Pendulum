@@ -1,12 +1,13 @@
 #include <stdlib.h>
 #include <malloc.h>
 
-#include "pendulum.h"
+#include "system.h"
 
 void freeSystem(void *pPtr) {
     struct system *p = pPtr;
 
     free(p->method);
-    free(p->node);
+    free(p->var);
+    free(p->params);
     free(p);
 }

@@ -12,7 +12,7 @@
 #include "stringBuilder.h"
 #include "entity.h"
 
-#include "pendulum.h"
+#include "system.h"
 
 static void loadInput(struct EngineCore *this) {
     FILE *file = fopen("examples/input.txt", "r");
@@ -26,37 +26,37 @@ static void loadInput(struct EngineCore *this) {
         .name = "Euler",
         .coords = { 0.0, 0.0, 1.0 / 3.0, 0.5 },
         .color = { 0.7, 0.7, 0.7, 1.0 },
-        .f = euler
+        .method = euler
     };
     p->method[1] = (struct method) {
         .name = "Mod Euler",
         .coords = { 1.0 / 3.0, 0.0, 1.0 / 3.0, 0.5 },
         .color = { 0.5, 0.5, 0.5, 1.0 },
-        .f = modified_euler
+        .method = modified_euler
     };
     p->method[2] = (struct method) {
         .name = "Heun",
         .coords = { 2.0 / 3.0, 0.0, 1.0 / 3.0, 0.5 },
         .color = { 0.7, 0.7, 0.7, 1.0 },
-        .f = heun
+        .method = heun
     };
     p->method[3] = (struct method) {
         .name = "RK4",
         .coords = { 0.0, 0.5, 1.0 / 3.0, 0.5 },
         .color = { 0.5, 0.5, 0.5, 1.0 },
-        .f = rk4
+        .method = rk4
     };
     p->method[4] = (struct method) {
         .name = "RK5",
         .coords = { 1.0 / 3.0, 0.5, 1.0 / 3.0, 0.5 },
         .color = { 0.7, 0.7, 0.7, 1.0 },
-        .f = rk5
+        .method = rk5
     };
     p->method[5] = (struct method) {
         .name = "20 x RK5",
         .coords = { 2.0 / 3.0, 0.5, 1.0 / 3.0, 0.5 },
         .color = { 0.5, 0.5, 0.5, 1.0 },
-        .f = x20rk5
+        .method = x20rk5
     };
 
     fscanf(file, "%f", &p->time);
@@ -65,19 +65,21 @@ static void loadInput(struct EngineCore *this) {
 
     fscanf(file, "%d %d", &p->pendulumCount, &p->nodeCount);
 
-    struct node (*node)[p->pendulumCount][p->nodeCount] = (void *)(p->node = malloc(sizeof(struct node) * p->pendulumCount * p->nodeCount * p->qMethod));
+    struct variables (*var)[p->pendulumCount][p->nodeCount] = (void *)(p->var = malloc(sizeof(struct variables[p->pendulumCount][p->nodeCount]) * p->qMethod));
+    struct params (*params)[p->pendulumCount][p->nodeCount] = (void *)(p->params = malloc(sizeof(struct params[p->pendulumCount][p->nodeCount]) * p->qMethod));
 
     for (int i = 0; i < p->pendulumCount; i += 1) {
         for (int j = 0; j < p->nodeCount; j += 1) {
             fscanf(file, "%lf %lf %lf %lf", 
-                &node[0][i][j].th,
-                &node[0][i][j].dth,
-                &node[0][i][j].mass, 
-                &node[0][i][j].length
+                &var[0][i][j].th,
+                &var[0][i][j].dth,
+                &params[0][i][j].mass, 
+                &params[0][i][j].length
             );
-            node[0][i][j].th = glm_rad(node[0][i][j].th);
+            var[0][i][j].th = glm_rad(var[0][i][j].th);
             for (int k = 1; k < p->qMethod; k += 1) {
-                node[k][i][j] = node[0][i][j];
+                var[k][i][j] = var[0][i][j];
+                params[k][i][j] = params[0][i][j];
             }
         }
     }
