@@ -1,4 +1,4 @@
-#include <cglm.h>
+#include <cglm/cglm.h>
 #include <string.h>
 
 #include <gsl/gsl_linalg.h>
@@ -9,15 +9,18 @@
 #include "state.h"
 
 #include "entity.h"
-#include "instanceBuffer.h"
+#include "myInstance.h"
+#include "camera.h"
 
 #include "renderPassObj.h"
 
 #include "system.h"
 
+#include "pendulumEnum.h"
+
 #define g 9.81
 
-void updatePos(struct instance *node, struct instance *line, struct variables *var, struct params *params, int N) {
+void updatePos(struct myInstance *node, struct myInstance *line, struct variables *var, struct params *params, int N) {
     node[0].pos[0] = +params[0].length * sin(var[0].th);
     node[0].pos[2] = -params[0].length * cos(var[0].th);
     for (int i = 1; i < N; i += 1) {
@@ -110,8 +113,8 @@ void fun(uint32_t n, struct variables var[n], struct params params[n], struct va
 void update(
     float t,
     struct system *s,
-    struct instance *node[s->qMethod][s->pendulumCount],
-    struct instance *line[s->qMethod][s->pendulumCount]) {
+    struct myInstance *node[s->qMethod][s->pendulumCount],
+    struct myInstance *line[s->qMethod][s->pendulumCount]) {
     struct variables (*var)[s->pendulumCount][s->nodeCount] = (void *)s->var;
     struct params (*params)[s->pendulumCount][s->nodeCount] = (void *)s->params;
 
@@ -123,7 +126,7 @@ void update(
     }
 }
 
-void initNode(struct instance *node, struct instance *line, struct params *params, int N) {
+void initNode(struct myInstance *node, struct myInstance *line, struct params *params, int N) {
     for (int i = 0; i < N + 1; i += 1) {
         glm_vec3_fill(node[i].pos, 0.0f);
         glm_vec3_fill(node[i].rotation, 0.0f);
@@ -161,48 +164,42 @@ void initNode(struct instance *node, struct instance *line, struct params *param
 }
 
 void simulation(struct EngineCore *engine, enum state *state) {
-    struct system *p = findResource(&engine->resource, "Pendulum");
+    struct system *p = findResource(&engine->resource, PENDULUM_DATA);
     int M = p->pendulumCount;
     int N = p->nodeCount;
     struct variables (*var)[M][N] = (void *)p->var;
     struct params (*params)[M][N] = (void *)p->params;
 
-    struct ResourceManager *entityData = findResource(&engine->resource, "Entity");
-    struct ResourceManager *screenData = findResource(&engine->resource, "ScreenData");
+    struct ResourceManager *entityData = findResource(&engine->resource, ENTITY);
+    struct ResourceManager *nodeData = findResource(entityData, ENTITY_NODE);
+    struct ResourceManager *lineData = findResource(entityData, ENTITY_LINE);
+    struct ResourceManager *nameData = findResource(entityData, ENTITY_NAME);
+    struct ResourceManager *screenData = findResource(&engine->resource, SCREEN_DATA);
+    struct ResourceManager *screenModel = findResource(screenData, SCREEN_MODEL);
+    struct ResourceManager *screenText = findResource(screenData, SCREEN_TEXT);
 
     struct Entity *entity[p->qMethod * 3]; for (int i = 0; i < p->qMethod; i += 1) {
-        char buffer[3][50] = {};
-
-        sprintf(buffer[0], "Node%d", i);
-        sprintf(buffer[1], "Line%d", i);
-        sprintf(buffer[2], "Name %d", i);
-
-        entity[2 * i + 0] = findResource(entityData, buffer[0]);
-        entity[2 * i + 1] = findResource(entityData, buffer[1]);
-        entity[2 * p->qMethod + i] = findResource(entityData, buffer[2]);
+        entity[2 * i + 0] = findResource(nodeData, i);
+        entity[2 * i + 1] = findResource(lineData, i);
+        entity[2 * p->qMethod + i] = findResource(nameData, i);
     };
     size_t qEntity = sizeof(entity) / sizeof(struct Entity *);
 
-    struct ResourceManager *renderPassCoreData = findResource(&engine->resource, "RenderPassCoreData");
+    struct ResourceManager *renderPassCoreData = findResource(&engine->resource, RENDER_PASS_CORE);
     struct renderPassCore *renderPassArr[] = { 
-        findResource(renderPassCoreData, "Clean"),
-        findResource(renderPassCoreData, "Stay")
+        findResource(renderPassCoreData, RENDER_PASS_CLEAN),
+        findResource(renderPassCoreData, RENDER_PASS_STAY)
     };
     size_t qRenderPassArr = sizeof(renderPassArr) / sizeof(struct renderPassCore *);
 
     struct renderPassObj *renderPass[p->qMethod * 2]; for (int i = 0; i < p->qMethod; i += 1) {
-        char buffer[2][50] = {};
-
-        sprintf(buffer[0], "Screen %d", i);
-        sprintf(buffer[1], "Text Screen %d", i);
-
-        renderPass[i] = findResource(screenData, buffer[0]);
-        renderPass[p->qMethod + i] = findResource(screenData, buffer[1]);
+        renderPass[i] = findResource(screenModel, i);
+        renderPass[p->qMethod + i] = findResource(screenText, i);
     };
     size_t qRenderPass = sizeof(renderPass) / sizeof(struct renderPassObj *);
 
-    struct instance *node[p->qMethod][M];
-    struct instance *line[p->qMethod][M];
+    struct myInstance *node[p->qMethod][M];
+    struct myInstance *line[p->qMethod][M];
 
     for (int i = 0; i < p->qMethod; i += 1) {
         node[i][0] = entity[2 * i + 0]->instance;
@@ -232,9 +229,9 @@ void simulation(struct EngineCore *engine, enum state *state) {
         float dTime = p->time * engine->deltaTime.deltaTime;
         if (isRunning) update(dTime, p, node, line);
 
-        updateInstances(entity, qEntity, dTime);
+        updateMyInstances(entity, qEntity, dTime);
         for (int i = 0; i < p->qMethod; i += 1) {
-            moveCamera(&engine->window, &renderPass[i]->camera, engine->deltaTime.deltaTime);
+            moveCamera(&engine->window, renderPass[i]->camera, engine->deltaTime.deltaTime);
         }
 
         drawFrame(engine, qRenderPass, renderPass, qRenderPassArr, renderPassArr);
@@ -249,9 +246,9 @@ void simulation(struct EngineCore *engine, enum state *state) {
     switch (*state) {
         case LOAD_SIMULATION:
             vkDeviceWaitIdle(engine->graphics.device);
-            cleanupResource(&engine->resource, "Pendulum");
-            cleanupResource(&engine->resource, "Entity");
-            cleanupResource(&engine->resource, "ScreenData");
+            cleanupResource(&engine->resource, PENDULUM_DATA);
+            cleanupResource(&engine->resource, ENTITY);
+            cleanupResource(&engine->resource, SCREEN_DATA);
             break;
         default:
     }

@@ -1,6 +1,7 @@
-[submodule "dependencies/gsl"]
-	path = dependencies/gsl
-	url = https://github.com/ampl/gsl
 [submodule "dependencies/tREngine"]
 	path = dependencies/tREngine
 	url = https://github.com/Trenek/tREngine
+	branch = dev
+[submodule "dependencies/gsl"]
+	path = dependencies/gsl
+	url = https://github.com/ampl/gsl

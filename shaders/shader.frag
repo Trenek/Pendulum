@@ -13,5 +13,4 @@ layout(set = 1, binding = 0) uniform sampler2D texSampler[1];
 
 void main() {
     outColor = fragColor;
-    //outColor = vec4(texture(texSampler[nonuniformEXT(fragTexIndex)], fragTexCoord).xyz * fragColor, 1.0) / (shadow + 1);
 }
