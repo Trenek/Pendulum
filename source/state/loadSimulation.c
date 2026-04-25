@@ -23,43 +23,46 @@ static void loadInput(struct EngineCore *this) {
 
     struct system *p = malloc(sizeof(struct system));
 
+#define LIGHTER { 0.4, 0.4, 1.0, 1.0 }
+#define DARKER { 0.2, 0.2, 1.0, 1.0 }
+
     p->qMethod = 6;
     p->method = malloc(sizeof(struct method) * p->qMethod);
 
     p->method[0] = (struct method) {
         .name = "Euler",
         .coords = { 0.0, 0.0, 1.0 / 3.0, 0.5 },
-        .color = { 0.7, 0.7, 0.7, 1.0 },
+        .color = LIGHTER,
         .method = euler
     };
     p->method[1] = (struct method) {
         .name = "Mod Euler",
         .coords = { 1.0 / 3.0, 0.0, 1.0 / 3.0, 0.5 },
-        .color = { 0.5, 0.5, 0.5, 1.0 },
+        .color = DARKER,
         .method = modified_euler
     };
     p->method[2] = (struct method) {
         .name = "Heun",
         .coords = { 2.0 / 3.0, 0.0, 1.0 / 3.0, 0.5 },
-        .color = { 0.7, 0.7, 0.7, 1.0 },
+        .color = LIGHTER,
         .method = heun
     };
     p->method[3] = (struct method) {
         .name = "RK4",
         .coords = { 0.0, 0.5, 1.0 / 3.0, 0.5 },
-        .color = { 0.5, 0.5, 0.5, 1.0 },
+        .color = DARKER,
         .method = rk4
     };
     p->method[4] = (struct method) {
         .name = "RK5",
         .coords = { 1.0 / 3.0, 0.5, 1.0 / 3.0, 0.5 },
-        .color = { 0.7, 0.7, 0.7, 1.0 },
+        .color = LIGHTER,
         .method = rk5
     };
     p->method[5] = (struct method) {
         .name = "20 x RK5",
         .coords = { 2.0 / 3.0, 0.5, 1.0 / 3.0, 0.5 },
-        .color = { 0.5, 0.5, 0.5, 1.0 },
+        .color = DARKER,
         .method = x20rk5
     };
 
@@ -92,6 +95,9 @@ static void loadInput(struct EngineCore *this) {
 
     addResource(&this->resource, PENDULUM_DATA, p, freeSystem);
 }
+
+#undef LIGHTER
+#undef DARKER
 
 static void addEntities(struct EngineCore *this) {
     struct ResourceManager *entityData = calloc(1, sizeof(struct ResourceManager));
