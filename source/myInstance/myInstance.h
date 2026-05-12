@@ -3,6 +3,8 @@
 
 #include <cglm/cglm.h>
 
+#include "instanceBuilder.h"
+
 #define INS(x, y) \
     .instanceSize = sizeof(struct x), \
     .instanceBufferSize = sizeof(struct y), \
@@ -29,4 +31,13 @@ struct myInstance {
 struct Entity;
 void updateMyInstances(struct Entity **model, size_t qModel, float deltaTime);
 void myInstanceUpdater(void *instancePtr, void *instanceBufferPtr, uint32_t instanceCount, float deltaTime);
+
+static inline struct instanceBuilder myInstanceInfo() {
+    return (struct instanceBuilder) {
+        .size = sizeof(struct myInstance),
+        .bufferSize = sizeof(struct myInstanceBuffer),
+        .updater = myInstanceUpdater,
+    };
+}
+
 #endif

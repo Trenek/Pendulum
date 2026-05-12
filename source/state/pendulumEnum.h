@@ -8,6 +8,7 @@ enum PendulumEnum {
     PENDULUM_DATA,
     ENTITY,
     SCREEN_DATA,
+    COMMAND_QUEUE,
 
     TEXTURES_COLOR = 0,
 
@@ -37,4 +38,6 @@ enum PendulumEnum {
 
     SCREEN_MODEL = 0,
     SCREEN_TEXT,
+
+    COMMAND_QUEUE_GRAPHICS = 0,
 };

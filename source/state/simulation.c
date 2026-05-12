@@ -11,6 +11,7 @@
 #include "entity.h"
 #include "myInstance.h"
 #include "camera.h"
+#include "commandQueue.h"
 
 #include "renderPassObj.h"
 
@@ -177,6 +178,8 @@ void simulation(struct EngineCore *engine, enum state *state) {
     struct ResourceManager *screenData = findResource(&engine->resource, SCREEN_DATA);
     struct ResourceManager *screenModel = findResource(screenData, SCREEN_MODEL);
     struct ResourceManager *screenText = findResource(screenData, SCREEN_TEXT);
+    struct ResourceManager *commandQueue = findResource(&engine->resource, COMMAND_QUEUE);
+    struct ResourceManager *renderPassCoreData = findResource(&engine->resource, RENDER_PASS_CORE);
 
     struct Entity *entity[p->qMethod * 3]; for (int i = 0; i < p->qMethod; i += 1) {
         entity[2 * i + 0] = findResource(nodeData, i);
@@ -185,12 +188,17 @@ void simulation(struct EngineCore *engine, enum state *state) {
     };
     size_t qEntity = sizeof(entity) / sizeof(struct Entity *);
 
-    struct ResourceManager *renderPassCoreData = findResource(&engine->resource, RENDER_PASS_CORE);
     struct renderPassCore *renderPassArr[] = { 
         findResource(renderPassCoreData, RENDER_PASS_CLEAN),
         findResource(renderPassCoreData, RENDER_PASS_STAY)
     };
     size_t qRenderPassArr = sizeof(renderPassArr) / sizeof(struct renderPassCore *);
+
+    struct CommandQueue *graphics = findResource(commandQueue, COMMAND_QUEUE_GRAPHICS);
+    struct CommandQueue *queue[] = {
+        graphics,
+    };
+    size_t qQueue = sizeof(queue) / sizeof(struct CommandQueue *);
 
     struct renderPassObj *renderPass[p->qMethod * 2]; for (int i = 0; i < p->qMethod; i += 1) {
         renderPass[i] = findResource(screenModel, i);
@@ -234,7 +242,20 @@ void simulation(struct EngineCore *engine, enum state *state) {
             moveCamera(&engine->window, renderPass[i]->camera, engine->deltaTime.deltaTime);
         }
 
-        drawFrame(engine, qRenderPass, renderPass, qRenderPassArr, renderPassArr);
+        engineUpdate(engine, qRenderPass, renderPass);
+        
+        aquireNextImage(engine, graphics->inFlightFence, graphics->semaphore);
+
+        queueDraw(graphics, engine, qRenderPass, renderPass, 1, 
+            (VkSemaphore []) {
+                graphics->semaphore[engine->currentFrame],
+            },
+            (VkPipelineStageFlags []) {
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            }
+        );
+
+        presentFrame(engine, qRenderPassArr, renderPassArr, qQueue, queue);
         if ((KEY_PRESS | KEY_CHANGE) == getKeyState(&engine->window, GLFW_KEY_R)) {
             *state = LOAD_SIMULATION;
         }

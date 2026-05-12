@@ -16,8 +16,7 @@
 
 #include "graphicsPipelineLayout.h"
 #include "graphicsPipelineObj.h"
-
-#include "Vertex.h"
+#include "descriptorSetLayoutObj.h"
 
 #include "pendulumEnum.h"
 
@@ -95,9 +94,9 @@ static void createGraphicPipelineLayouts(struct EngineCore *this) {
 
     addResource(graphicPipelinesData, GRAPHIC_PIPELINE_LAYOUT_OBJ, createGraphicPipelineLayout((struct graphicsPipelineLayoutBuilder) {
         .descriptorSetLayout = (VkDescriptorSetLayout []){
-            objectLayout->descriptorSetLayout,
-            colorTexture->descriptor.descriptorSetLayout,
             cameraLayout->descriptorSetLayout,
+            colorTexture->descriptor.descriptorSetLayout,
+            objectLayout->descriptorSetLayout,
         },
         .qDescriptorSetLayout = 3,
 
@@ -109,12 +108,12 @@ static void createGraphicPipelineLayouts(struct EngineCore *this) {
                 .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
             }
         }
-    }, &this->graphics), destroyObjGraphicsPipelineLayout);
+    }, &this->graphics), destroyPipelineLayoutObj);
     addResource(graphicPipelinesData, GRAPHIC_PIPELINE_LAYOUT_GLTF, createGraphicPipelineLayout((struct graphicsPipelineLayoutBuilder) {
         .descriptorSetLayout = (VkDescriptorSetLayout []){
-            gltfLayout->descriptorSetLayout,
-            colorTexture->descriptor.descriptorSetLayout,
             cameraLayout->descriptorSetLayout,
+            colorTexture->descriptor.descriptorSetLayout,
+            gltfLayout->descriptorSetLayout,
         },
         .qDescriptorSetLayout = 3,
 
@@ -126,11 +125,11 @@ static void createGraphicPipelineLayouts(struct EngineCore *this) {
                 .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT
             }
         }
-    }, &this->graphics), destroyObjGraphicsPipelineLayout);
+    }, &this->graphics), destroyPipelineLayoutObj);
     addResource(graphicPipelinesData, GRAPHIC_PIPELINE_LAYOUT_FONT, createGraphicPipelineLayout((struct graphicsPipelineLayoutBuilder) {
         .descriptorSetLayout = (VkDescriptorSetLayout []){
-            fontLayout->descriptorSetLayout,
             cameraLayout->descriptorSetLayout,
+            fontLayout->descriptorSetLayout,
         },
         .qDescriptorSetLayout = 2,
 
@@ -142,7 +141,7 @@ static void createGraphicPipelineLayouts(struct EngineCore *this) {
                 .stageFlags = VK_SHADER_STAGE_VERTEX_BIT
             }
         }
-    }, &this->graphics), destroyObjGraphicsPipelineLayout);
+    }, &this->graphics), destroyPipelineLayoutObj);
 
     addResource(&this->resource, GRAPHIC_PIPELINE_LAYOUTS, graphicPipelinesData, cleanupResourceManager);
 }
@@ -163,7 +162,7 @@ static void createGraphicPipelines(struct EngineCore *this) {
 
     size_t qRenderPass = sizeof(renderPass) / sizeof(struct renderPassCore *);
 
-    addResource(graphicPipelinesData, GRAPHIC_PIPELINE_OBJ, createObjGraphicsPipeline((struct graphicsPipelineBuilder) {
+    addResource(graphicPipelinesData, GRAPHIC_PIPELINE_OBJ, createGraphicsPipelineObj((struct GraphicsPipelineBuilder) {
         .pipelineLayout = objLayout->pipelineLayout,
         .qRenderPassCore = qRenderPass,
         .renderPassCore = renderPass,
@@ -173,11 +172,11 @@ static void createGraphicPipelines(struct EngineCore *this) {
         .maxDepth = 1.0f,
         .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
 
-        Vert(ObjVertex),
+        .vert = defaultObjVert(),
         .operation = VK_COMPARE_OP_LESS,
         .cullFlags = VK_CULL_MODE_BACK_BIT,
-    }, &this->graphics), destroyObjGraphicsPipeline);
-    addResource(graphicPipelinesData, GRAPHIC_PIPELINE_GLTF, createObjGraphicsPipeline((struct graphicsPipelineBuilder) {
+    }, &this->graphics), destroyPipelineObj);
+    addResource(graphicPipelinesData, GRAPHIC_PIPELINE_GLTF, createGraphicsPipelineObj((struct GraphicsPipelineBuilder) {
         .pipelineLayout = gltfLayout->pipelineLayout,
         .qRenderPassCore = qRenderPass,
         .renderPassCore = renderPass,
@@ -187,11 +186,11 @@ static void createGraphicPipelines(struct EngineCore *this) {
         .maxDepth = 1.0f,
         .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
 
-        Vert(GltfVertex),
+        .vert = defaultGltfVert(),
         .operation = VK_COMPARE_OP_LESS,
         .cullFlags = VK_CULL_MODE_BACK_BIT,
-    }, &this->graphics), destroyObjGraphicsPipeline);
-    addResource(graphicPipelinesData, GRAPHIC_PIPELINE_FONT, createObjGraphicsPipeline((struct graphicsPipelineBuilder) {
+    }, &this->graphics), destroyPipelineObj);
+    addResource(graphicPipelinesData, GRAPHIC_PIPELINE_FONT, createGraphicsPipelineObj((struct GraphicsPipelineBuilder) {
         .pipelineLayout = fontLayout->pipelineLayout,
         .qRenderPassCore = qRenderPass,
         .renderPassCore = renderPass,
@@ -201,10 +200,10 @@ static void createGraphicPipelines(struct EngineCore *this) {
         .maxDepth = 1.0f,
         .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
 
-        Vert(FontVertex),
+        .vert = defaultFontVert(),
         .operation = VK_COMPARE_OP_LESS,
         .cullFlags = VK_CULL_MODE_BACK_BIT,
-    }, &this->graphics), destroyObjGraphicsPipeline);
+    }, &this->graphics), destroyPipelineObj);
 
     addResource(&this->resource, GRAPHIC_PIPELINE, graphicPipelinesData, cleanupResourceManager);
 }

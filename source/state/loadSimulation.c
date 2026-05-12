@@ -13,6 +13,8 @@
 #include "gltfBuilder.h"
 #include "fontBuilder.h"
 #include "entity.h"
+#include "descriptorSetLayoutObj.h"
+#include "commandQueue.h"
 
 #include "system.h"
 
@@ -120,7 +122,7 @@ static void addEntities(struct EngineCore *this) {
             .modelData = findResource(modelData, MODEL_SPHERE),
             .objectLayout = objLayout->descriptorSetLayout,
 
-            INS(myInstance, myInstanceBuffer),
+            .instance = myInstanceInfo(),
         }, &this->graphics), destroyEntity);
 
         addResource(lineData, i, createGltf((struct GltfBuilder) {
@@ -128,7 +130,7 @@ static void addEntities(struct EngineCore *this) {
             .modelData = findResource(modelData, MODEL_LINE),
             .objectLayout = gltfLayout->descriptorSetLayout,
 
-            INS(myInstance, myInstanceBuffer),
+            .instance = myInstanceInfo(),
         }, &this->graphics), destroyEntity);
 
         addResource(fontData, i, createFont((struct FontBuilder) {
@@ -137,7 +139,7 @@ static void addEntities(struct EngineCore *this) {
             .modelData = findResource(modelData, MODEL_FONT),
             .objectLayout = fontLayout->descriptorSetLayout,
 
-            INS(myInstance, myInstanceBuffer),
+            .instance = myInstanceInfo(),
             .center = 0
         }, &this->graphics), destroyEntity);
     }
@@ -162,7 +164,7 @@ void loadScreens(struct EngineCore *this) {
     struct ResourceManager *nameData = findResource(entityData, ENTITY_NAME);
     struct system *p = findResource(&this->resource, PENDULUM_DATA);
 
-    struct graphicsPipeline *pipe[] = {
+    struct Pipeline *pipe[] = {
         findResource(graphicsPipelineData, GRAPHIC_PIPELINE_OBJ),
         findResource(graphicsPipelineData, GRAPHIC_PIPELINE_GLTF),
         findResource(graphicsPipelineData, GRAPHIC_PIPELINE_FONT),
@@ -192,7 +194,7 @@ void loadScreens(struct EngineCore *this) {
                 p->method[i].coords[2],
                 p->method[i].coords[3],
             },
-            .data = (struct pipelineConnection[]) {
+            .data = (struct pipelineConnectionBuilder[]) {
                 {
                     .texture = &colorTexture->descriptor,
                     .pipe = pipe[0],
@@ -211,11 +213,9 @@ void loadScreens(struct EngineCore *this) {
                 },
             },
             .qData = 2,
-            .updateCameraBuffer = myUpdateFirstPersonCameraBuffer,
-            .cameraBufferSize = sizeof(struct CameraBuffer),
-            .cameraSize = sizeof(struct camera),
-            .camera = &(struct camera) {},
+            .camera = myFirstPersonCameraInfo(&(struct camera) {}),
             .cameraDescriptorSetLayout = cameraLayout->descriptorSetLayout,
+            .drawRenderPass = drawRenderPass,
         }, &this->graphics), destroyRenderPassObj);
         addResource(screenText, i, createRenderPassObj((struct renderPassBuilder){
             .renderPass = renderPassArr[1],
@@ -231,7 +231,7 @@ void loadScreens(struct EngineCore *this) {
                 p->method[i].color[2],
                 p->method[i].color[3]
             },
-            .data = (struct pipelineConnection[]) {
+            .data = (struct pipelineConnectionBuilder[]) {
                 {
                     .pipe = pipe[2],
                     .entity = (struct Entity* []) {
@@ -241,11 +241,9 @@ void loadScreens(struct EngineCore *this) {
                 }
             },
             .qData = 1,
-            .updateCameraBuffer = myUpdateFirstPersonCameraBuffer,
-            .cameraBufferSize = sizeof(struct CameraBuffer),
-            .cameraSize = sizeof(struct camera),
-            .camera = &(struct camera) {},
+            .camera = myFirstPersonCameraInfo(&(struct camera) {}),
             .cameraDescriptorSetLayout = cameraLayout->descriptorSetLayout,
+            .drawRenderPass = drawRenderPass,
         }, &this->graphics), destroyRenderPassObj);
         struct camera *camera[] = {
             ((struct renderPassObj *)findResource(screenModel, i))->camera,
@@ -278,11 +276,20 @@ void loadScreens(struct EngineCore *this) {
     addResource(&this->resource, SCREEN_DATA, screenData, cleanupResourceManager);
 }
 
+static void createCommandQueues(struct EngineCore *engine) {
+    struct ResourceManager *queueData = calloc(1, sizeof(struct ResourceManager));
+
+    addResource(queueData, COMMAND_QUEUE_GRAPHICS, createCommandQueue(&engine->graphics), destroyCommandQueue);
+
+    addResource(&engine->resource, COMMAND_QUEUE, queueData, cleanupResourceManager);
+}
+
 void loadSimulation(struct EngineCore *engine, enum state *state) {
     loadInput(engine);
     addEntities(engine);
 
     loadScreens(engine);
+    createCommandQueues(engine);
     
     *state = SIMULATION;
 }
